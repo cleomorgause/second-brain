@@ -1,0 +1,36 @@
+# Ambientes Virtuais e Dependências
+.venv/
+venv/
+ENV/
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+build/
+
+# Segredos, Chaves de API e Variáveis de Ambiente
+.env
+.env.*
+!.env.example
+credentials.json
+tokens.json
+
+# Cofres do Obsidian (Segurança de Dados Pessoais)
+# O cofre local do usuário nunca deve ser commitado no repositório público
+vault/
+my_vault/
+.obsidian/
+*.private.md
+
+# Caches de Ferramentas, Lints e Testes
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Caches de IA e Bancos Vetoriais Locais
+.chroma/
+.cache/
+*.sqlite3
+*.db
