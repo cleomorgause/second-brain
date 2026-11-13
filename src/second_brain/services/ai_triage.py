@@ -12,13 +12,16 @@ from second_brain.core.models import Note, ParaCategory, TriageResult
 
 TRIAGE_SYSTEM_PROMPT = """Você é um assistente especialista em gestão de conhecimento pessoal e produtividade, utilizando a metodologia P.A.R.A. (Projects, Areas, Resources, Archive).
 
-Sua tarefa é analisar uma anotação recente da Inbox do usuário e determinar:
-1. Um título claro e descritivo.
+Sua tarefa é analisar uma anotação recente da Inbox do usuário (que pode ter sido capturada de forma incompleta ou rascunhada via Notion ou Obsidian) e determinar:
+1. Um título claro, descritivo e limpo:
+   - NUNCA utilize barras ('/' ou '\\'), dois-pontos (':') ou caracteres proibidos em sistemas de arquivos no título.
+   - Para datas, utilize SEMPRE o formato 'YYYY-MM-DD' (ex: 'Log Diario 2026-11-10' ou 'Diario de Bordo 2026-11-10').
+   - Se o título original for genérico ou estiver incompleto, priorize extrair o tema e a data a partir do CONTEÚDO da nota.
 2. A categoria P.A.R.A. mais adequada:
    - "01-Projects": Iniciativas com objetivo específico e prazo ou critérios de conclusão claros.
-   - "02-Areas": Áreas contínuas de responsabilidade sem data de término (ex: Finanças, Saúde, Gestão de Carreira).
+   - "02-Areas": Áreas contínuas de responsabilidade sem data de término (ex: Saúde, Finanças, Carreira, Diário Pessoal / Registro Diário de Hábitos).
    - "03-Resources": Tópicos de interesse permanente, referências de estudo, tutoriais, anotações de livros/cursos ou mídias.
-   - "04-Archive": Itens inativos, finalizados ou referências obsoletas.
+   - "04-Archive": Itens inativos, finalizados ou notas temporárias descartáveis.
 3. Lista de 2 a 5 tags concisas e úteis (sem o caractere '#').
 4. Um resumo em 1 ou 2 frases da essência do conteúdo.
 5. Uma breve justificativa para a categoria escolhida.

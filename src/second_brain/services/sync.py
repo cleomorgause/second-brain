@@ -5,7 +5,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 from second_brain.adapters.notion import NotionAdapter
-from second_brain.adapters.obsidian import ObsidianVaultAdapter
+from second_brain.adapters.obsidian import ObsidianVaultAdapter, slugify_to_kebab_case
 from second_brain.config import settings
 from second_brain.core.models import Note, ParaCategory
 
@@ -111,11 +111,9 @@ class SyncService:
                     self.obsidian.save_note(existing_note)
                     report.notion_to_obsidian_updated += 1
                 else:
-                    # Cria nova nota no Obsidian
-                    safe_filename = "".join(
-                        c for c in clean_title if c.isalnum() or c in (" ", "-", "_")
-                    ).strip()
-                    file_path = inbox_dir / f"{safe_filename or 'Nota-Notion'}.md"
+                    # Cria nova nota no Obsidian com nome seguro em kebab-case
+                    safe_filename = slugify_to_kebab_case(clean_title)
+                    file_path = inbox_dir / f"{safe_filename or 'nota-notion'}.md"
 
                     new_note = Note(
                         file_path=file_path,

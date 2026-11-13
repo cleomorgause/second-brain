@@ -1,6 +1,7 @@
 """Adaptador para o cofre local do Obsidian em formato Markdown."""
 
 import re
+import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -9,6 +10,25 @@ import yaml
 from second_brain.core.models import Note, NoteMetadata, ParaCategory, PrivacyLevel
 
 FRONTMATTER_PATTERN = re.compile(r"^---\s*\n(.*?)\n---\s*\n(.*)$", re.DOTALL)
+
+
+def slugify_to_kebab_case(text: str) -> str:
+    """Converte um título em um nome de arquivo seguro em kebab-case.
+
+    - Remove acentuação e caracteres especiais.
+    - Substitui barras, pontos e espaços por hífens.
+    - Garante que nenhuma subpasta acidental seja criada.
+    """
+    # Normaliza caracteres Unicode (ex: 'á' -> 'a')
+    normalized = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+
+    # Substitui barras, contra-barras e pontuações por hífens
+    cleaned = re.sub(r"[/\\:?*\"<>|.]+", "-", normalized)
+
+    # Substitui qualquer caractere não alfanumérico por hífen
+    cleaned = re.sub(r"[^a-zA-Z0-9]+", "-", cleaned).strip("-").lower()
+
+    return cleaned or "nota"
 
 
 class ObsidianVaultAdapter:
@@ -125,9 +145,8 @@ class ObsidianVaultAdapter:
         tags: list[str] | None = None,
         privacy: PrivacyLevel = PrivacyLevel.PRIVATE,
     ) -> Note:
-        """Cria uma nova anotação rápida na Inbox."""
-        safe_title = "".join(c for c in title if c.isalnum() or c in (" ", "-", "_")).strip()
-        filename = f"{safe_title}.md"
+        """Cria uma nova anotação rápida na Inbox com nome em kebab-case seguro."""
+        filename = f"{slugify_to_kebab_case(title)}.md"
         inbox_dir = self.get_category_path(ParaCategory.INBOX)
         file_path = inbox_dir / filename
 
@@ -180,13 +199,22 @@ class ObsidianVaultAdapter:
     def move_note(
         self, note: Note, target_category: ParaCategory, new_filename: str | None = None
     ) -> Note:
-        """Move uma nota para outra categoria P.A.R.A. e atualiza seus metadados."""
+        """Move uma nota para outra categoria P.A.R.A. e atualiza seus metadados.
+
+        Garante que o nome final do arquivo seja plano e seguro (kebab-case),
+        evitando a criação acidental de subpastas com caracteres como '/'.
+        """
         target_dir = self.get_category_path(target_category)
         target_dir.mkdir(parents=True, exist_ok=True)
 
-        final_filename = new_filename if new_filename else note.file_path.name
-        if not final_filename.endswith(".md"):
-            final_filename += ".md"
+        if new_filename:
+            base_name = new_filename[:-3] if new_filename.endswith(".md") else new_filename
+            clean_name = slugify_to_kebab_case(base_name)
+            final_filename = f"{clean_name}.md"
+        else:
+            final_filename = note.file_path.name
+            if not final_filename.endswith(".md"):
+                final_filename += ".md"
 
         new_file_path = target_dir / final_filename
 
