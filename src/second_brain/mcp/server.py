@@ -198,9 +198,24 @@ def create_mcp_server(
     return server
 
 
-# Instância padrão pré-configurada para uso geral e execução de servidor
-mcp_server = create_mcp_server()
+# Instância padrão criada sob demanda para evitar inicialização pesada durante imports
+_default_mcp_server: MCPServer | None = None
+
+
+def get_default_mcp_server() -> MCPServer:
+    """Retorna ou inicializa a instância singleton do servidor MCP."""
+    global _default_mcp_server
+    if _default_mcp_server is None:
+        _default_mcp_server = create_mcp_server()
+    return _default_mcp_server
+
+
+# Mantido para retrocompatibilidade
+def __getattr__(name: str) -> Any:
+    if name == "mcp_server":
+        return get_default_mcp_server()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 if __name__ == "__main__":
-    mcp_server.run(transport="stdio")
+    get_default_mcp_server().run(transport="stdio")

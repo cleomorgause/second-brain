@@ -7,6 +7,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.vscode/
 
 # Segredos, Chaves de API e Variáveis de Ambiente
 .env

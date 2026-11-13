@@ -193,8 +193,13 @@ def test_fetch_inbox_pages_with_mock_client() -> None:
     mock_client.blocks.children.list.assert_called_once_with(block_id="page-1")
 
 
-def test_fetch_inbox_pages_missing_database_id_raises_value_error() -> None:
+def test_fetch_inbox_pages_missing_database_id_raises_value_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Verifica se fetch_inbox_pages levanta ValueError quando não há database_id configurado."""
+    from second_brain.config import settings
+
+    monkeypatch.setattr(settings, "notion_inbox_database_id", None)
     mock_client = MagicMock()
     adapter = NotionAdapter(client=mock_client, inbox_database_id=None)
 

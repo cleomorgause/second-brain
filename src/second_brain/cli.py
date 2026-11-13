@@ -109,13 +109,27 @@ def list_notes(
 
 @app.command()
 def triage(
+    note_name: str | None = typer.Option(
+        None,
+        "--note",
+        "-n",
+        help="Nome ou título da nota específica para triar (ex: 'Linha teste' ou 'Linha teste.md')",
+    ),
     model: str | None = typer.Option(
         None, "--model", "-m", help="Substituir modelo padrão de IA para esta execução"
     ),
 ) -> None:
     """Usa IA para processar as notas pendentes na Inbox e sugerir organização P.A.R.A."""
     adapter = get_adapter()
-    inbox_notes = adapter.list_notes_in_category(ParaCategory.INBOX)
+
+    if note_name:
+        specific_note = adapter.find_note_by_title(note_name)
+        if not specific_note:
+            console.print(f"[red]Nota '{note_name}' não foi encontrada no cofre.[/red]")
+            raise typer.Exit(code=1)
+        inbox_notes = [specific_note]
+    else:
+        inbox_notes = adapter.list_notes_in_category(ParaCategory.INBOX)
 
     if not inbox_notes:
         console.print(
@@ -139,7 +153,23 @@ def triage(
 
                 result = triage_service.triage_note(note, status_callback=update_status)
         except Exception as e:
-            console.print(f"[red]Erro ao processar com a IA: {e}[/red]")
+            notion_url = note.metadata.extra.get("notion_url")
+            error_details = (
+                f"[bold red]❌ Erro ao processar com a IA:[/bold red] {e}\n"
+                f"[cyan]Arquivo local:[/cyan] {note.file_path.name}"
+            )
+            if notion_url:
+                error_details += (
+                    f"\n[cyan]Link no Notion:[/cyan] [link={notion_url}]{notion_url}[/link]"
+                )
+
+            console.print(
+                Panel(
+                    error_details,
+                    title=f"⚠️ Falha na Nota: {note.metadata.title}",
+                    border_style="red",
+                )
+            )
             continue
 
         panel_content = (

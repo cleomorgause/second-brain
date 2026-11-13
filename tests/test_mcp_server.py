@@ -15,6 +15,12 @@ from second_brain.mcp.server import create_mcp_server
 
 
 @pytest.fixture
+def anyio_backend() -> str:
+    """Fixa o backend assíncrono exclusivamente no asyncio para evitar testes duplicados e lentidão."""
+    return "asyncio"
+
+
+@pytest.fixture
 def temp_vault(tmp_path: Path) -> ObsidianVaultAdapter:
     """Fixture que fornece um ObsidianVaultAdapter isolado para testes."""
     adapter = ObsidianVaultAdapter(vault_path=tmp_path)

@@ -258,8 +258,12 @@ class NotionAdapter:
         inbox_database_id: str | None = None,
         client: Client | None = None,
     ) -> None:
-        self.api_key = api_key or settings.notion_api_key
-        self.inbox_database_id = inbox_database_id or settings.notion_inbox_database_id
+        self.api_key = api_key if api_key is not None else settings.notion_api_key
+        self.inbox_database_id = (
+            inbox_database_id
+            if inbox_database_id is not None
+            else settings.notion_inbox_database_id
+        )
 
         self.client: Client | None
         if client is not None:

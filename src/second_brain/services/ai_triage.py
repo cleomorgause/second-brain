@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 from typing import Any
 
 import litellm
@@ -33,6 +34,41 @@ Você DEVE responder ESTRITAMENTE em formato JSON com o seguinte esquema:
   "action_items": ["item 1", "item 2"]
 }
 """
+
+
+def parse_json_safely(raw_text: str) -> dict[str, Any]:
+    """Extrai e valida JSON da resposta do modelo de forma tolerante a falhas comuns."""
+    text = raw_text.strip()
+
+    # Remove cercaduras de código Markdown (```json ... ```) se presentes
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\s*```$", "", text)
+        text = text.strip()
+
+    # Tenta parsing direto
+    try:
+        return dict(json.loads(text))
+    except json.JSONDecodeError:
+        pass
+
+    # Tenta extrair o maior bloco delimitado por { e }
+    match = re.search(r"(\{.*\})", text, re.DOTALL)
+    if match:
+        extracted = match.group(1)
+        try:
+            return dict(json.loads(extracted))
+        except json.JSONDecodeError:
+            # Substitui quebras de linha literais dentro de strings por espaços
+            sanitized = re.sub(r"(?<!\\)\n", " ", extracted)
+            try:
+                return dict(json.loads(sanitized))
+            except json.JSONDecodeError:
+                pass
+
+    raise ValueError(
+        f"Não foi possível converter a resposta da IA em JSON válido. Texto retornado:\n{raw_text}"
+    )
 
 
 class AITriageService:
@@ -70,11 +106,11 @@ class AITriageService:
             ],
             "response_format": {"type": "json_object"},
             "timeout": 60.0,
-            "max_tokens": 1024,
+            "max_tokens": 4096,
         }
 
         # Para Gemini 3+, não passamos temperature
-        if not ("gemini-3" in self.model_name.lower()):
+        if "gemini-3" not in self.model_name.lower():
             kwargs["temperature"] = 0.2
 
         if status_callback:
@@ -95,7 +131,7 @@ class AITriageService:
             status_callback("Resposta recebida da IA! Processando JSON e categorias P.A.R.A....")
 
         raw_content = response.choices[0].message.content or "{}"
-        data = json.loads(raw_content)
+        data = parse_json_safely(raw_content)
 
         raw_category = data.get("suggested_category", ParaCategory.RESOURCES.value)
         try:
