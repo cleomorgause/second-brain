@@ -51,7 +51,7 @@ class SyncService:
         self.notion = notion_adapter or NotionAdapter()
 
     def sync_inbox(self, direction: SyncDirection = SyncDirection.BIDIRECTIONAL) -> SyncReport:
-        """Sincroniza as anotações da caixa de entrada (Inbox) conforme a direção especificada."""
+        """Sincroniza as anotações conforme a direção especificada."""
         report = SyncReport(direction=direction)
         self.obsidian.initialize_vault_structure()
 
@@ -126,20 +126,25 @@ class SyncService:
                 report.errors.append(f"Erro ao salvar nota '{clean_title}' no Obsidian: {exc}")
 
     def _sync_obsidian_to_notion(self, report: SyncReport) -> None:
-        """Pega as notas da Inbox local do Obsidian e as envia para o Notion."""
+        """Sincroniza notas locais do Obsidian para o Notion.
+
+        - Atualiza no Notion as notas que foram categorizadas pela IA (título limpo, tags, resumo, categoria P.A.R.A.).
+        - Envia novas notas criadas localmente para a base do Notion.
+        """
         try:
-            inbox_notes = self.obsidian.list_notes_in_category(ParaCategory.INBOX)
+            # Pega todas as notas do cofre (Inbox + notas já triadas) para manter o Notion 100% espelhado
+            vault_notes = self.obsidian.list_all_notes()
         except Exception as exc:
-            report.errors.append(f"Falha ao listar notas da Inbox local: {exc}")
+            report.errors.append(f"Falha ao listar notas do cofre: {exc}")
             return
 
-        for o_note in inbox_notes:
+        for o_note in vault_notes:
             title = o_note.metadata.title
             has_notion_id = bool(o_note.metadata.extra.get("notion_page_id"))
 
             try:
                 self.notion.create_page(o_note)
-                # Salva novamente no Obsidian para persistir o novo 'notion_page_id' no YAML
+                # Salva novamente no Obsidian para persistir o novo 'notion_page_id' no YAML se for nova
                 self.obsidian.save_note(o_note)
 
                 if has_notion_id:
